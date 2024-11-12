@@ -1,0 +1,16 @@
+# Ignore environment settings and secrets
+.env
+
+# Ignore virtual environment (if created within project folder)
+venv/
+
+# Ignore Python cache and logs
+__pycache__/
+*.py[cod]
+*.log
+
+# Ignore Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Other files to ignore
+info.txt
