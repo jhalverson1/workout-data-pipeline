@@ -14,5 +14,4 @@ __pycache__/
 
 # Other files to ignore
 info.txt
-
-# Test extra commit
+settings.json
