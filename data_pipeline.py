@@ -54,6 +54,7 @@ def insert_workouts(data):
     data['Start'] = pd.to_datetime(data['Start'])
     data['End'] = pd.to_datetime(data['End'])
     data['Active Energy (kcal)'] = pd.to_numeric(data['Active Energy (kcal)'], errors='coerce')
+    data['Distance (mi)'] = pd.to_numeric(data['Distance (mi)'], errors='coerce')  # New line for distance
     
     # Convert duration from hh:mm:ss to total seconds as a float
     data['Duration'] = data['Duration'].apply(lambda x: sum(int(t) * 60**i for i, t in enumerate(reversed(x.split(':')))))
@@ -82,7 +83,8 @@ def insert_workouts(data):
                         "start_time": row['Start'],
                         "end_time": row['End'],
                         "activeEnergyBurned": row['Active Energy (kcal)'],
-                        "duration": row['Duration']
+                        "duration": row['Duration'],
+                        "distance": row['Distance (mi)']  # New distance field
                     }
                 )
                 inserted_count += 1
