@@ -25,13 +25,6 @@ file_extension = os.getenv("FILE_EXTENSION", "csv")
 # Create a database engine
 engine = create_engine(f'postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}')
 
-# Function to get the most recent processed file timestamp
-def get_last_processed_timestamp():
-    query = "SELECT MAX(file_create_datetime) FROM processed_files"
-    with engine.connect() as conn:
-        result = conn.execute(text(query)).fetchone()
-    return result[0]  # Returns the timestamp of the most recent processed file
-
 # Function to mark a file as processed
 def mark_file_as_processed(filename, create_time, upload_time, records_inserted):
     with engine.begin() as conn:
@@ -47,6 +40,12 @@ def mark_file_as_processed(filename, create_time, upload_time, records_inserted)
                 "records_inserted": records_inserted
             }
         )
+
+def is_file_processed(filename):
+    query = "SELECT 1 FROM processed_files WHERE filename = :filename"
+    with engine.connect() as conn:
+        result = conn.execute(text(query), {"filename": filename}).fetchone()
+    return result is not None  # Returns True if the file exists, False otherwise
 
 # Function to insert workout data, avoiding duplicates
 def insert_workouts(data):
@@ -97,16 +96,12 @@ def process_workout_files():
     processed_files_count = 0
     total_records_inserted = 0
 
-    # Get the timestamp of the last processed file
-    last_processed_time = get_last_processed_timestamp()
-    print("Last processed file timestamp:", last_processed_time)
-
     for file in icloud_folder.glob(f"*.{file_extension}"):
         filename = file.name
         file_create_time = datetime.fromtimestamp(file.stat().st_ctime)
-        
-        # Skip files created before or at the last processed timestamp
-        if last_processed_time and file_create_time <= last_processed_time:
+    
+        # Check if the file is already in the processed_files table
+        if is_file_processed(filename):
             skipped_files_count += 1
             continue
 
