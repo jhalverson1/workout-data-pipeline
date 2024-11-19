@@ -75,8 +75,8 @@ def insert_workouts(data):
                 # Insert the workout record if it's not a duplicate
                 conn.execute(
                     text("""
-                    INSERT INTO workouts (name, start_time, end_time, activeEnergyBurned, duration)
-                    VALUES (:name, :start_time, :end_time, :activeEnergyBurned, :duration)
+                    INSERT INTO workouts (name, start_time, end_time, activeEnergyBurned, duration, distance)
+                    VALUES (:name, :start_time, :end_time, :activeEnergyBurned, :duration, :distance)
                     """),
                     {
                         "name": row['Type'],
