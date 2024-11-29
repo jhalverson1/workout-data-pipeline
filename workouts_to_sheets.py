@@ -27,9 +27,10 @@ def get_sheets_service():
     return service
 
 # Function to update Google Sheets with workout data
+# Function to update Google Sheets with workout data
 def update_google_sheets_with_data(data):
     """
-    Updates the Google Sheets file with the given data.
+    Clears the Google Sheets file and updates it with the given data.
 
     Args:
         data (DataFrame): The data to be written to Google Sheets.
@@ -48,6 +49,14 @@ def update_google_sheets_with_data(data):
     service = get_sheets_service()
     sheet = service.spreadsheets()
 
+    # Clear the Google Sheet content
+    sheet.values().clear(
+        spreadsheetId=SPREADSHEET_ID,
+        range="Sheet1"
+    ).execute()
+
+    print("Google Sheet cleared.")
+
     # Update the Google Sheet by overwriting existing data
     sheet.values().update(
         spreadsheetId=SPREADSHEET_ID,
@@ -63,6 +72,7 @@ def process_workout_files_direct_to_sheets():
     """
     Processes all workout files from the specified iCloud folder:
     - Reads workout data from CSV files.
+    - Calculates 'Pace' (minutes per mile) for 'Outdoor Walk' and 'Outdoor Run' workouts.
     - Writes the combined data directly to Google Sheets.
     """
     total_files_processed = 0
@@ -79,6 +89,17 @@ def process_workout_files_direct_to_sheets():
             data['Active Energy (kcal)'] = pd.to_numeric(data['Active Energy (kcal)'], errors='coerce')
             data['Distance (mi)'] = pd.to_numeric(data['Distance (mi)'], errors='coerce')
             data['Duration'] = data['Duration'].apply(lambda x: sum(int(t) * 60**i for i, t in enumerate(reversed(x.split(':')))))
+
+            # Filter for 'Outdoor Run' workouts add to list to include more workouts. e.g. ['Outdoor Run','Outdoor Walk']
+            valid_workouts = ['Outdoor Run']
+            data = data[data['Type'].isin(valid_workouts)]
+
+            # Calculate Pace (Duration in minutes / Distance in miles)
+            # Calculate Pace (Duration in minutes / Distance in miles) and round to 2 decimal places
+            data['Pace (min/mi)'] = data.apply(
+                lambda row: round(row['Duration'] / 60 / row['Distance (mi)'], 2) if row['Distance (mi)'] > 0 else None,
+                axis=1
+            )
 
             # Combine data from all files
             combined_data = pd.concat([combined_data, data], ignore_index=True)
