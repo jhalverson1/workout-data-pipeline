@@ -98,40 +98,38 @@ def download_file(drive_service, file_id):
 
 def update_google_sheets_with_data(sheets_service, data):
     """
-    Appends the given data to the Google Sheets file, adding column names only if the sheet is empty.
+    Clears the Google Sheets file and updates it with the given data.
 
     Args:
         sheets_service: Authenticated Google Sheets API service instance.
         data (DataFrame): The data to be written to Google Sheets.
     """
-    # Fetch existing data from the sheet to check if it is empty
-    existing_data = sheets_service.spreadsheets().values().get(
+    # Convert all datetime columns to strings
+    for col in data.select_dtypes(include=["datetime", "datetimetz"]):
+        data[col] = data[col].dt.strftime("%Y-%m-%d %H:%M:%S")
+
+    # Replace NaN or None values with empty strings to avoid JSON errors
+    data = data.fillna("")
+
+    # Clear the Google Sheet content
+    sheets_service.spreadsheets().values().clear(
         spreadsheetId=SPREADSHEET_ID, range="Sheet1"
     ).execute()
 
-    # Check if the sheet is empty
-    sheet_empty = "values" not in existing_data or not existing_data["values"]
+    print("Google Sheet cleared.")
 
-    # Prepare data to append
-    if sheet_empty:
-        # Add column names if the sheet is empty
-        sheet_data = [data.columns.tolist()] + data.values.tolist()
-        print("Sheet is empty. Adding column names and data.")
-    else:
-        # Add only data rows if the sheet already has content
-        sheet_data = data.values.tolist()
-        print("Sheet already contains data. Adding rows only.")
+    # Prepare data to append (include column names)
+    sheet_data = [data.columns.tolist()] + data.values.tolist()
 
-    # Append data to the sheet
-    sheets_service.spreadsheets().values().append(
+    # Update the Google Sheet by overwriting existing data
+    sheets_service.spreadsheets().values().update(
         spreadsheetId=SPREADSHEET_ID,
-        range="Sheet1",
+        range="Sheet1!A1",
         valueInputOption="RAW",
-        insertDataOption="INSERT_ROWS",
         body={"values": sheet_data},
     ).execute()
 
-    print(f"Google Sheet appended with {len(data)} rows.")
+    print(f"Google Sheet updated with {len(data)} rows.")
 
 
 def send_email(program_output):
@@ -163,7 +161,8 @@ def send_email(program_output):
 
 def process_workout_files_from_drive():
     """
-    Processes only new workout files from the specified Google Drive folder.
+    Processes all workout files from the specified Google Drive folder.
+    Clears the existing Google Sheets file and repopulates it with all data.
     """
     drive_service, sheets_service = authenticate_google_services()
     files = fetch_files_from_drive(drive_service, GOOGLE_DRIVE_FOLDER_ID)
@@ -173,21 +172,16 @@ def process_workout_files_from_drive():
         print("No files found in the specified Google Drive folder.")
         return
 
-    processed_files = get_processed_files()
     combined_data = pd.DataFrame()
     total_files_processed = 0
-    total_files_skipped = 0  # Counter for skipped files
 
     for file in files:
-        if file["id"] in processed_files:
-            total_files_skipped += 1  # Increment skipped files counter
-            continue
-
         try:
-            print(f"Processing new file: {file['name']}")
+            print(f"Processing file: {file['name']}")
             file_stream = download_file(drive_service, file["id"])
             data = pd.read_csv(file_stream)
 
+            # Preprocess workout data
             data["Start"] = pd.to_datetime(data["Start"])
             data["End"] = pd.to_datetime(data["End"])
             data["Active Energy (kcal)"] = pd.to_numeric(data["Active Energy (kcal)"], errors="coerce")
@@ -209,36 +203,17 @@ def process_workout_files_from_drive():
             combined_data = pd.concat([combined_data, data], ignore_index=True)
             total_files_processed += 1
 
-            # Mark file as processed
-            save_processed_file(file["id"])
-
         except Exception as e:
             print(f"Error processing file {file['name']}: {e}")
 
+    # Deduplicate combined data
     if not combined_data.empty:
+        print("Deduplicating data...")
+        combined_data = combined_data.drop_duplicates(subset=["Start", "Type"])
         update_google_sheets_with_data(sheets_service, combined_data)
 
     # Print summary
     print(f"Total files processed: {total_files_processed}")
-    print(f"Total files skipped: {total_files_skipped}")
-
-PROCESSED_FILES_PATH = "processed_files.txt"
-
-def get_processed_files():
-    """
-    Reads the list of processed file IDs from a file.
-    """
-    if not os.path.exists(PROCESSED_FILES_PATH):
-        return set()
-    with open(PROCESSED_FILES_PATH, "r") as file:
-        return set(file.read().splitlines())
-
-def save_processed_file(file_id):
-    """
-    Appends a file ID to the list of processed files.
-    """
-    with open(PROCESSED_FILES_PATH, "a") as file:
-        file.write(f"{file_id}\n")
 
 
 if __name__ == "__main__":
