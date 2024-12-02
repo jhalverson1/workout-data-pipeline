@@ -98,24 +98,37 @@ def download_file(drive_service, file_id):
 
 def update_google_sheets_with_data(sheets_service, data):
     """
-    Clears the Google Sheets file and updates it with the given data.
+    Appends the given data to the Google Sheets file, adding column names only if the sheet is empty.
 
     Args:
         sheets_service: Authenticated Google Sheets API service instance.
         data (DataFrame): The data to be written to Google Sheets.
     """
-    for col in data.select_dtypes(include=["datetime", "datetimetz"]):
-        data[col] = data[col].astype(str)
+    # Fetch existing data from the sheet to check if it is empty
+    existing_data = sheets_service.spreadsheets().values().get(
+        spreadsheetId=SPREADSHEET_ID, range="Sheet1"
+    ).execute()
 
-    data = data.fillna("")
-    sheet_data = [data.columns.tolist()] + data.values.tolist()
+    # Check if the sheet is empty
+    sheet_empty = "values" not in existing_data or not existing_data["values"]
 
+    # Prepare data to append
+    if sheet_empty:
+        # Add column names if the sheet is empty
+        sheet_data = [data.columns.tolist()] + data.values.tolist()
+        print("Sheet is empty. Adding column names and data.")
+    else:
+        # Add only data rows if the sheet already has content
+        sheet_data = data.values.tolist()
+        print("Sheet already contains data. Adding rows only.")
+
+    # Append data to the sheet
     sheets_service.spreadsheets().values().append(
-    spreadsheetId=SPREADSHEET_ID,
-    range="Sheet1",
-    valueInputOption="RAW",
-    insertDataOption="INSERT_ROWS",
-    body={"values": sheet_data},
+        spreadsheetId=SPREADSHEET_ID,
+        range="Sheet1",
+        valueInputOption="RAW",
+        insertDataOption="INSERT_ROWS",
+        body={"values": sheet_data},
     ).execute()
 
     print(f"Google Sheet appended with {len(data)} rows.")
