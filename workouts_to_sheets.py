@@ -17,7 +17,7 @@ load_dotenv()
 
 # Google Sheets and Drive Configuration
 SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")  # Add your Google Sheet ID to .env
-SERVICE_ACCOUNT_FILE = "service_account.json"  # Path to your JSON key file
+SERVICE_ACCOUNT_FILE = os.getenv("SERVICE_ACCOUNT_FILE")  # Path to your JSON key file
 GOOGLE_DRIVE_FOLDER_ID = os.getenv("GOOGLE_DRIVE_FOLDER_ID")  # Add your Google Drive folder ID to .env
 
 # Gmail Config
