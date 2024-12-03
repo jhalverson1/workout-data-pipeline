@@ -22,7 +22,7 @@ class EmailService:
             program_output (str): The output of the program to include in the email.
         """
         sender_email = Config.GMAIL_ADDRESS
-        receiver_email = Config.GMAIL_ADDRESS
+        receiver_email = Config.GMAIL_RECIPIENT
         password = Config.GMAIL_PASSWORD
 
         subject = "Workout Data Processing Completed"
@@ -39,6 +39,6 @@ class EmailService:
                 server.starttls()
                 server.login(sender_email, password)
                 server.sendmail(sender_email, receiver_email, msg.as_string())
-                print("Email sent successfully.")
+                print(f"Email sent successfully from {sender_email} to {receiver_email}.")
         except Exception as e:
             print(f"Failed to send email: {e}")

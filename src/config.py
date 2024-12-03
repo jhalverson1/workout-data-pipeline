@@ -12,6 +12,7 @@ class Config:
     # Gmail Configuration
     GMAIL_ADDRESS = os.getenv("GMAIL_ADDRESS")
     GMAIL_PASSWORD = os.getenv("GMAIL_PASSWORD")
+    GMAIL_RECIPIENT = os.getenv("GMAIL_RECIPIENT")
     
     # Application Configuration
     VALID_WORKOUT_TYPES = ["Outdoor Run"]
