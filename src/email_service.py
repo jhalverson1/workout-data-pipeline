@@ -1,13 +1,25 @@
+"""
+This module provides the EmailService class, which is responsible for sending
+emails using SMTP with the program's output.
+"""
+
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from config import Config
 
 class EmailService:
+    """
+    A service for sending emails with the program's output.
+    """
+
     @staticmethod
     def send_email(program_output: str) -> None:
         """
         Sends an email containing the full output of the program.
+
+        Args:
+            program_output (str): The output of the program to include in the email.
         """
         sender_email = Config.GMAIL_ADDRESS
         receiver_email = Config.GMAIL_ADDRESS

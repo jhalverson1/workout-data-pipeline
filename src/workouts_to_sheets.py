@@ -1,3 +1,9 @@
+"""
+This module provides the WorkoutProcessor class and a command-line interface
+for processing workout files from Google Drive and updating Google Sheets.
+It also includes an option to send the program output via email.
+"""
+
 from typing import Optional
 import pandas as pd
 import sys
@@ -9,11 +15,22 @@ from email_service import EmailService
 from config import Config
 
 class WorkoutProcessor:
+    """
+    A class to process workout files and update Google Sheets.
+    """
+
     def __init__(self):
+        """
+        Initializes the WorkoutProcessor with GoogleServices and WorkoutDataProcessor.
+        """
         self.google_services = GoogleServices()
         self.data_processor = WorkoutDataProcessor()
     
     def process_files(self) -> None:
+        """
+        Processes workout files from Google Drive, deduplicates the data,
+        and updates Google Sheets with the processed data.
+        """
         files = self.google_services.fetch_files(folder_id=Config.GOOGLE_DRIVE_WORKOUTS_FOLDER_ID)
         if not files:
             print("No files found in the specified Google Drive folder.")
@@ -43,6 +60,9 @@ class WorkoutProcessor:
         print(f"Total files processed: {total_files_processed}")
 
 def main():
+    """
+    Main function to parse command-line arguments and execute the workout processing.
+    """
     parser = argparse.ArgumentParser(description="Process workout files and update Google Sheets.")
     parser.add_argument("--send-email", action="store_true",
                        help="Send the program output via email.")

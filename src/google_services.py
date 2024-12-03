@@ -1,3 +1,9 @@
+"""
+This module provides the GoogleServices class, which handles authentication
+and operations with Google Drive and Google Sheets, such as fetching files,
+downloading files, and updating sheets.
+"""
+
 from typing import Tuple, List, Dict
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
@@ -7,10 +13,23 @@ import pandas as pd
 from config import Config
 
 class GoogleServices:
+    """
+    A class to interact with Google Drive and Google Sheets services.
+    """
+
     def __init__(self):
+        """
+        Initializes the GoogleServices class and authenticates the user.
+        """
         self.drive_service, self.sheets_service = self._authenticate()
     
     def _authenticate(self) -> Tuple[object, object]:
+        """
+        Authenticates the user using service account credentials.
+
+        Returns:
+            Tuple[object, object]: Authenticated Drive and Sheets service objects.
+        """
         creds = Credentials.from_service_account_file(
             Config.SERVICE_ACCOUNT_FILE,
             scopes=["https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/spreadsheets"]
@@ -20,7 +39,7 @@ class GoogleServices:
             build("sheets", "v4", credentials=creds)
         )
     
-    def fetch_files(self, folder_id):
+    def fetch_files(self, folder_id: str) -> List[Dict[str, str]]:
         """
         Fetch CSV files from the specified Google Drive folder.
 
@@ -28,7 +47,7 @@ class GoogleServices:
             folder_id (str): ID of the Google Drive folder to fetch files from.
 
         Returns:
-            List of file metadata (name and ID) for CSV files in the folder.
+            List[Dict[str, str]]: List of file metadata (name and ID) for CSV files in the folder.
         """
         query = f"'{folder_id}' in parents and mimeType='text/csv'"
         files = []
@@ -58,7 +77,7 @@ class GoogleServices:
             file_id (str): ID of the file to download.
 
         Returns:
-            BytesIO object containing the file's content.
+            BytesIO: BytesIO object containing the file's content.
         """
         request = self.drive_service.files().get_media(fileId=file_id)
         file_stream = BytesIO()
@@ -76,7 +95,7 @@ class GoogleServices:
         Clears the Google Sheets file and updates it with the given data.
 
         Args:
-            data (DataFrame): The data to be written to Google Sheets.
+            data (pd.DataFrame): The data to be written to Google Sheets.
             spreadsheet_id (str): The ID of the Google Sheets file to update.
         """
         # Convert all datetime columns to strings

@@ -1,10 +1,30 @@
+"""
+This module contains the WorkoutDataProcessor class, which processes workout data
+from a pandas DataFrame, including converting data types, filtering, and calculating
+additional metrics like pace.
+"""
+
 from typing import Optional
 import pandas as pd
 from config import Config
 
 class WorkoutDataProcessor:
+    """
+    A class to process workout data from a pandas DataFrame.
+    """
+
     @staticmethod
     def process_workout_data(data: pd.DataFrame) -> pd.DataFrame:
+        """
+        Processes workout data by converting data types, filtering valid workouts,
+        and calculating pace.
+
+        Args:
+            data (pd.DataFrame): The workout data to process.
+
+        Returns:
+            pd.DataFrame: The processed workout data.
+        """
         # Process workout data
         data["Start"] = pd.to_datetime(data["Start"])
         data["End"] = pd.to_datetime(data["End"])
