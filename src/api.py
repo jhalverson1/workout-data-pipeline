@@ -1,5 +1,22 @@
 """
-This module provides the REST API endpoints for receiving workout data.
+REST API Module for Workout Tracking Application
+
+This module provides the FastAPI application and endpoints for receiving and
+managing workout data. It handles:
+- Data validation using Pydantic models
+- Workout data submission
+- Workout data retrieval
+- Error handling and HTTP responses
+
+The API provides endpoints for:
+- POST /workouts: Submit new workout data
+- GET /workouts: Retrieve all stored workouts
+
+Example:
+    To start the API server:
+    ```
+    uvicorn api:app --host 0.0.0.0 --port 8000
+    ```
 """
 
 from fastapi import FastAPI, HTTPException
@@ -9,13 +26,25 @@ from typing import Optional
 from database import DatabaseManager
 from data_processor import WorkoutDataProcessor
 
-app = FastAPI()
+app = FastAPI(
+    title="Workout Tracking API",
+    description="API for receiving and storing workout data",
+    version="1.0.0"
+)
 db = DatabaseManager()
 processor = WorkoutDataProcessor()
 
 class WorkoutData(BaseModel):
     """
     Pydantic model for workout data validation.
+    
+    Attributes:
+        start_time (datetime): Start time of the workout
+        end_time (datetime): End time of the workout
+        type (str): Type of workout (e.g., "Outdoor Run")
+        duration (str): Duration in format "HH:MM:SS"
+        distance_mi (float, optional): Distance in miles
+        active_energy_kcal (float, optional): Calories burned
     """
     start_time: datetime
     end_time: datetime
@@ -24,10 +53,22 @@ class WorkoutData(BaseModel):
     distance_mi: Optional[float] = None
     active_energy_kcal: Optional[float] = None
 
-@app.post("/workouts")
+@app.post("/workouts", response_model=dict)
 async def create_workout(workout: WorkoutData):
     """
-    Endpoint to receive and store workout data.
+    Create a new workout record.
+    
+    Receives workout data, processes it, and stores it in the database.
+    Calculates additional metrics like pace before storage.
+    
+    Args:
+        workout (WorkoutData): Validated workout data
+        
+    Returns:
+        dict: Message confirming creation and the ID of the new record
+        
+    Raises:
+        HTTPException: If data processing or storage fails
     """
     try:
         # Convert duration string to seconds
@@ -60,7 +101,13 @@ async def create_workout(workout: WorkoutData):
 @app.get("/workouts")
 async def get_workouts():
     """
-    Endpoint to retrieve all workouts.
+    Retrieve all workout records.
+    
+    Returns:
+        list: List of all workout records as dictionaries
+        
+    Raises:
+        HTTPException: If database retrieval fails
     """
     try:
         workouts = db.get_all_workouts()
