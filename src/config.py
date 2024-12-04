@@ -16,3 +16,10 @@ class Config:
     
     # Application Configuration
     VALID_WORKOUT_TYPES = ["Outdoor Run"]
+    
+    # Database Configuration
+    DATABASE_PATH = os.getenv("DATABASE_PATH", "workouts.db")
+    
+    # API Configuration
+    API_HOST = os.getenv("API_HOST", "0.0.0.0")
+    API_PORT = int(os.getenv("API_PORT", "8000"))
