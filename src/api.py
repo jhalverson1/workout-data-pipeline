@@ -19,10 +19,10 @@ Example:
     ```
 """
 
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException, APIRouter
+from pydantic import BaseModel, Field
+from typing import List, Dict, Optional
 from datetime import datetime
-from typing import Optional
 from database import DatabaseManager
 from data_processor import WorkoutDataProcessor
 
@@ -34,83 +34,64 @@ app = FastAPI(
 db = DatabaseManager()
 processor = WorkoutDataProcessor()
 
-class WorkoutData(BaseModel):
-    """
-    Pydantic model for workout data validation.
-    
-    Attributes:
-        start_time (datetime): Start time of the workout
-        end_time (datetime): End time of the workout
-        type (str): Type of workout (e.g., "Outdoor Run")
-        duration (str): Duration in format "HH:MM:SS"
-        distance_mi (float, optional): Distance in miles
-        active_energy_kcal (float, optional): Calories burned
-    """
-    start_time: datetime
-    end_time: datetime
-    type: str
-    duration: str  # Format: "HH:MM:SS"
-    distance_mi: Optional[float] = None
-    active_energy_kcal: Optional[float] = None
+router = APIRouter(prefix="/api/v1/workouts", tags=["workouts"])
 
-@app.post("/workouts", response_model=dict)
-async def create_workout(workout: WorkoutData):
-    """
-    Create a new workout record.
-    
-    Receives workout data, processes it, and stores it in the database.
-    Calculates additional metrics like pace before storage.
-    
-    Args:
-        workout (WorkoutData): Validated workout data
-        
-    Returns:
-        dict: Message confirming creation and the ID of the new record
-        
-    Raises:
-        HTTPException: If data processing or storage fails
-    """
+# Pydantic models for data validation
+class Measurement(BaseModel):
+    units: str
+    qty: float
+
+class RoutePoint(BaseModel):
+    speed: float
+    speedAccuracy: float
+    longitude: float
+    courseAccuracy: float
+    timestamp: datetime
+    altitude: float
+    course: float
+    latitude: float
+    horizontalAccuracy: float
+    verticalAccuracy: float
+
+class Workout(BaseModel):
+    id: str
+    name: str
+    start: datetime
+    end: datetime
+    duration: float
+    location: str
+    distance: Optional[Measurement]
+    elevationUp: Optional[Measurement]
+    temperature: Optional[Measurement]
+    humidity: Optional[Measurement]
+    intensity: Optional[Measurement]
+    activeEnergyBurned: Optional[Measurement]
+    route: List[RoutePoint]
+    metadata: Dict = Field(default_factory=dict)
+
+class WorkoutPayload(BaseModel):
+    data: Dict[str, List[Workout]]
+
+@router.post("/")
+async def create_workout(payload: WorkoutPayload):
     try:
-        # Convert duration string to seconds
-        duration_seconds = sum(
-            int(t) * 60**i for i, t in enumerate(reversed(workout.duration.split(":")))
-        )
+        # Here you would:
+        # 1. Process the workout data
+        # 2. Save to database
+        # 3. Return success response
         
-        # Calculate pace if distance is available
-        pace_min_mi = None
-        if workout.distance_mi and workout.distance_mi > 0:
-            pace_min_mi = round(duration_seconds / 60 / workout.distance_mi, 2)
-        
-        # Prepare workout data for database
-        workout_data = {
-            "start_time": workout.start_time,
-            "end_time": workout.end_time,
-            "type": workout.type,
-            "duration": duration_seconds,
-            "distance_mi": workout.distance_mi,
-            "active_energy_kcal": workout.active_energy_kcal,
-            "pace_min_mi": pace_min_mi
+        return {
+            "status": "success",
+            "message": f"Received {len(payload.data['workouts'])} workouts",
+            "workout_ids": [workout.id for workout in payload.data['workouts']]
         }
-        
-        workout_id = db.insert_workout(workout_data)
-        return {"message": "Workout created successfully", "id": workout_id}
-    
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(
+            status_code=400,
+            detail=f"Error processing workout data: {str(e)}"
+        )
 
-@app.get("/workouts")
-async def get_workouts():
-    """
-    Retrieve all workout records.
-    
-    Returns:
-        list: List of all workout records as dictionaries
-        
-    Raises:
-        HTTPException: If database retrieval fails
-    """
-    try:
-        workouts = db.get_all_workouts()
-        return workouts.to_dict(orient="records")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) 
+@router.get("/{workout_id}")
+async def get_workout(workout_id: str):
+    # Retrieve workout data from database
+    pass 
