@@ -13,7 +13,7 @@ __pycache__/
 .ipynb_checkpoints/
 
 # Ignore DB files
-*.db
+workouts.db*
 
 # Other files to ignore
 info.txt
