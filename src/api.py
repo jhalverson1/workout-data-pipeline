@@ -21,7 +21,7 @@ Example:
 
 from fastapi import FastAPI, HTTPException, APIRouter
 from pydantic import BaseModel, Field
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from datetime import datetime
 from database import DatabaseManager
 from data_processor import WorkoutDataProcessor
@@ -69,23 +69,21 @@ class WorkoutPayload(BaseModel):
     data: Dict[str, List[Workout]]
 
 @router.post("/")
-async def create_workout(payload: WorkoutPayload):
+async def create_workout(payload: dict[str, Any]):
     try:
-        # Here you would:
-        # 1. Process the workout data
-        # 2. Save to database
-        # 3. Return success response
+        # Log the received payload for debugging
+        print(f"Received payload: {payload}")
         
         return {
             "status": "success",
-            "message": f"Received {len(payload.data['workouts'])} workouts",
-            "workout_ids": [workout.id for workout in payload.data['workouts']]
+            "message": "Workout data received",
+            "data": payload
         }
     except Exception as e:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Error processing workout data: {str(e)}"
-        )
+        return {
+            "status": "error",
+            "message": str(e)
+        }
 
 @router.get("/{workout_id}")
 async def get_workout(workout_id: str):
