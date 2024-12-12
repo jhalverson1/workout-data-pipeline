@@ -25,6 +25,8 @@ from typing import List, Dict, Optional, Any
 from datetime import datetime
 from database import DatabaseManager
 from data_processor import WorkoutDataProcessor
+import json
+import os
 
 app = FastAPI()
 db = DatabaseManager()
@@ -71,13 +73,21 @@ class WorkoutPayload(BaseModel):
 @router.post("/")
 async def create_workout(payload: dict[str, Any]):
     try:
-        # Log the received payload for debugging
-        print(f"Received payload: {payload}")
+        # Create logs directory if it doesn't exist
+        os.makedirs('logs', exist_ok=True)
         
+        # Generate filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"logs/payload_{timestamp}.json"
+        
+        # Write payload to file with pretty printing
+        with open(filename, 'w') as f:
+            json.dump(payload, f, indent=2)
+            
         return {
             "status": "success",
-            "message": "Workout data received",
-            "data": payload
+            "message": f"Workout data received and logged to {filename}",
+            "filename": filename
         }
     except Exception as e:
         return {
