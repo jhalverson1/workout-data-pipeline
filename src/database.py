@@ -140,6 +140,11 @@ class DatabaseManager:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 
+                # Check if workout already exists
+                cursor.execute("SELECT id FROM workouts WHERE id = ?", (workout.get('id', ''),))
+                if cursor.fetchone():
+                    return False  # Workout already exists
+                    
                 # Insert workout data with safer data access
                 cursor.execute("""
                     INSERT INTO workouts (

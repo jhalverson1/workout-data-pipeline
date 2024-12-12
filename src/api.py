@@ -87,6 +87,7 @@ async def create_workout(payload: dict[str, Any]):
         # Store workouts in database
         workouts = payload.get('data', {}).get('workouts', [])
         stored_workouts = []
+        duplicate_count = 0
         
         for workout in workouts:
             success = db.store_workout(workout)
@@ -98,10 +99,14 @@ async def create_workout(payload: dict[str, Any]):
                     'activeEnergyBurned': workout.get('activeEnergyBurned', {}).get('qty', 0),
                     'units': workout.get('activeEnergyBurned', {}).get('units', 'kcal')
                 })
+            else:
+                duplicate_count += 1
             
         return {
             "status": "success",
-            "message": f"Stored {len(stored_workouts)} workouts",
+            "message": f"Processed {len(workouts)} workouts",
+            "stored": len(stored_workouts),
+            "duplicates": duplicate_count,
             "filename": filename,
             "workouts": stored_workouts
         }
