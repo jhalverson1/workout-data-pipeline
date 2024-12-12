@@ -83,11 +83,22 @@ async def create_workout(payload: dict[str, Any]):
         # Write payload to file with pretty printing
         with open(filename, 'w') as f:
             json.dump(payload, f, indent=2)
+        
+        # Extract workout count and timestamps for response
+        workouts = payload.get('data', {}).get('workouts', [])
+        workout_times = [
+            {
+                'start': workout.get('start'),
+                'end': workout.get('end')
+            }
+            for workout in workouts
+        ]
             
         return {
             "status": "success",
-            "message": f"Workout data received and logged to {filename}",
-            "filename": filename
+            "message": f"Received {len(workouts)} workouts",
+            "filename": filename,
+            "workouts": workout_times
         }
     except Exception as e:
         return {
