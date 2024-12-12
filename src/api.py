@@ -84,12 +84,15 @@ async def create_workout(payload: dict[str, Any]):
         with open(filename, 'w') as f:
             json.dump(payload, f, indent=2)
         
-        # Extract workout count and timestamps for response
+        # Extract workout details for response
         workouts = payload.get('data', {}).get('workouts', [])
-        workout_times = [
+        workout_info = [
             {
+                'name': workout.get('name', 'Unknown'),
                 'start': workout.get('start'),
-                'end': workout.get('end')
+                'end': workout.get('end'),
+                'activeEnergyBurned': workout.get('activeEnergyBurned', {}).get('qty', 0),
+                'units': workout.get('activeEnergyBurned', {}).get('units', 'kcal')
             }
             for workout in workouts
         ]
@@ -98,7 +101,7 @@ async def create_workout(payload: dict[str, Any]):
             "status": "success",
             "message": f"Received {len(workouts)} workouts",
             "filename": filename,
-            "workouts": workout_times
+            "workouts": workout_info
         }
     except Exception as e:
         return {
