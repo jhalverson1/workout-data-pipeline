@@ -83,11 +83,7 @@ class DatabaseManager:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             
-            # Drop existing tables if they exist
-            cursor.execute("DROP TABLE IF EXISTS route_points")
-            cursor.execute("DROP TABLE IF EXISTS workouts")
-            
-            # Create workouts table
+            # Create workouts table if it doesn't exist
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS workouts (
                     id TEXT PRIMARY KEY,
@@ -113,7 +109,7 @@ class DatabaseManager:
                 )
             """)
             
-            # Create route_points table
+            # Create route_points table if it doesn't exist
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS route_points (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
