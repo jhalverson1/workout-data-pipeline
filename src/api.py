@@ -73,17 +73,6 @@ class WorkoutPayload(BaseModel):
 @router.post("/")
 async def create_workout(payload: dict[str, Any]):
     try:
-        # Create logs directory if it doesn't exist
-        os.makedirs('logs', exist_ok=True)
-        
-        # Generate filename with timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"logs/payload_{timestamp}.json"
-        
-        # Write payload to file with pretty printing
-        with open(filename, 'w') as f:
-            json.dump(payload, f, indent=2)
-        
         # Store workouts in database
         workouts = payload.get('data', {}).get('workouts', [])
         stored_workouts = []
@@ -101,16 +90,28 @@ async def create_workout(payload: dict[str, Any]):
                 })
             else:
                 duplicate_count += 1
+        
+        # Get total count of workouts in DB
+        total_workouts = len(db.get_all_workouts())
+        
+        # Print statistics to terminal
+        print("\n=== Workout Import Summary ===")
+        print(f"Processed: {len(workouts)} workouts")
+        print(f"Stored:    {len(stored_workouts)} new workouts")
+        print(f"Skipped:   {duplicate_count} duplicates")
+        print(f"Total DB:  {total_workouts} workouts")
+        print("===========================\n")
             
         return {
             "status": "success",
             "message": f"Processed {len(workouts)} workouts",
             "stored": len(stored_workouts),
             "duplicates": duplicate_count,
-            "filename": filename,
+            "total_in_db": total_workouts,
             "workouts": stored_workouts
         }
     except Exception as e:
+        print(f"Error processing workouts: {e}")
         return {
             "status": "error",
             "message": str(e)
