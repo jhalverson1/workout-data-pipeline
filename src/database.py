@@ -155,7 +155,7 @@ class DatabaseManager:
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     workout.get('id', ''),
-                    workout.get('workoutActivityType', 'Unknown'),
+                    workout.get('name', 'Unknown'),
                     workout.get('start', ''),
                     workout.get('end', ''),
                     workout.get('duration', 0.0),
