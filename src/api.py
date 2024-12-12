@@ -27,6 +27,7 @@ from database import DatabaseManager
 from data_processor import WorkoutDataProcessor
 import json
 import os
+from email_service import EmailService
 
 app = FastAPI()
 db = DatabaseManager()
@@ -103,14 +104,22 @@ async def create_workout(payload: dict[str, Any]):
         total_workouts = len(db.get_all_workouts())
         db_size = get_db_size()
         
-        # Print statistics to terminal
-        print("\n=== Workout Import Summary ===")
-        print(f"Processed: {len(workouts)} workouts")
-        print(f"Stored:    {len(stored_workouts)} new workouts")
-        print(f"Skipped:   {duplicate_count} duplicates")
-        print(f"Total DB:  {total_workouts} workouts")
-        print(f"DB Size:   {db_size} MB")
-        print("===========================\n")
+        # Create summary message
+        summary = (
+            "\n=== Workout Import Summary ===\n"
+            f"Processed: {len(workouts)} workouts\n"
+            f"Stored:    {len(stored_workouts)} new workouts\n"
+            f"Skipped:   {duplicate_count} duplicates\n"
+            f"Total DB:  {total_workouts} workouts\n"
+            f"DB Size:   {db_size} MB\n"
+            "===========================\n"
+        )
+        
+        # Print to terminal
+        print(summary)
+        
+        # Send email
+        EmailService.send_email(summary)
             
         return {
             "status": "success",
@@ -122,7 +131,9 @@ async def create_workout(payload: dict[str, Any]):
             "workouts": stored_workouts
         }
     except Exception as e:
-        print(f"Error processing workouts: {e}")
+        error_msg = f"Error processing workouts: {e}"
+        print(error_msg)
+        EmailService.send_email(error_msg)
         return {
             "status": "error",
             "message": str(e)
