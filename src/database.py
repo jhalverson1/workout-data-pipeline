@@ -29,6 +29,8 @@ import sqlite3
 from typing import Dict, Any
 import pandas as pd
 from contextlib import contextmanager
+from datetime import datetime
+import json
 
 class DatabaseManager:
     """
@@ -53,7 +55,7 @@ class DatabaseManager:
                           in the current directory.
         """
         self.db_path = db_path
-        self._init_db()
+        self.init_db()
     
     @contextmanager
     def get_connection(self):
@@ -76,76 +78,131 @@ class DatabaseManager:
         finally:
             conn.close()
     
-    def _init_db(self) -> None:
-        """
-        Initialize database by creating necessary tables if they don't exist.
-        
-        Creates the workouts table with the following schema:
-        - id: Primary key
-        - start_time: Workout start timestamp
-        - end_time: Workout end timestamp
-        - type: Workout type (e.g., "Outdoor Run")
-        - duration: Duration in seconds
-        - distance_mi: Distance in miles
-        - active_energy_kcal: Calories burned
-        - pace_min_mi: Pace in minutes per mile
-        - created_at: Record creation timestamp
-        """
-        with self.get_connection() as conn:
-            conn.execute("""
+    def init_db(self):
+        """Initialize database tables if they don't exist."""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            # Create workouts table
+            cursor.execute("""
                 CREATE TABLE IF NOT EXISTS workouts (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    start_time TIMESTAMP NOT NULL,
-                    end_time TIMESTAMP NOT NULL,
-                    type TEXT NOT NULL,
-                    duration INTEGER NOT NULL,
-                    distance_mi REAL,
-                    active_energy_kcal REAL,
-                    pace_min_mi REAL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE(start_time, type)
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    start_time TIMESTAMP,
+                    end_time TIMESTAMP,
+                    duration FLOAT,
+                    location TEXT,
+                    distance_qty FLOAT,
+                    distance_units TEXT,
+                    elevation_up_qty FLOAT,
+                    elevation_up_units TEXT,
+                    energy_burned_qty FLOAT,
+                    energy_burned_units TEXT,
+                    temperature_qty FLOAT,
+                    temperature_units TEXT,
+                    humidity_qty FLOAT,
+                    humidity_units TEXT,
+                    intensity_qty FLOAT,
+                    intensity_units TEXT,
+                    metadata TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             """)
+            
+            # Create route_points table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS route_points (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    workout_id TEXT,
+                    timestamp TIMESTAMP,
+                    latitude FLOAT,
+                    longitude FLOAT,
+                    altitude FLOAT,
+                    speed FLOAT,
+                    speed_accuracy FLOAT,
+                    course FLOAT,
+                    course_accuracy FLOAT,
+                    horizontal_accuracy FLOAT,
+                    vertical_accuracy FLOAT,
+                    FOREIGN KEY (workout_id) REFERENCES workouts (id)
+                )
+            """)
+            
             conn.commit()
     
-    def insert_workout(self, workout_data: Dict[str, Any]) -> int:
-        """
-        Insert a new workout record into the database.
-        
-        Args:
-            workout_data (Dict[str, Any]): Dictionary containing workout data with keys:
-                - start_time: Workout start timestamp
-                - end_time: Workout end timestamp
-                - type: Workout type
-                - duration: Duration in seconds
-                - distance_mi: Distance in miles (optional)
-                - active_energy_kcal: Calories burned (optional)
-                - pace_min_mi: Pace in minutes per mile (optional)
-            
-        Returns:
-            int: ID of the inserted record
-            
-        Raises:
-            sqlite3.IntegrityError: If a workout with the same start_time and type exists
-        """
-        with self.get_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("""
-                INSERT INTO workouts (
-                    start_time, end_time, type, duration,
-                    distance_mi, active_energy_kcal, pace_min_mi
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (
-                workout_data["start_time"],
-                workout_data["end_time"],
-                workout_data["type"],
-                workout_data["duration"],
-                workout_data.get("distance_mi"),
-                workout_data.get("active_energy_kcal"),
-                workout_data.get("pace_min_mi")
-            ))
-            conn.commit()
-            return cursor.lastrowid
+    def store_workout(self, workout: Dict[str, Any]) -> bool:
+        """Store a single workout and its route points."""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                # Insert workout data
+                cursor.execute("""
+                    INSERT INTO workouts (
+                        id, name, start_time, end_time, duration, location,
+                        distance_qty, distance_units,
+                        elevation_up_qty, elevation_up_units,
+                        energy_burned_qty, energy_burned_units,
+                        temperature_qty, temperature_units,
+                        humidity_qty, humidity_units,
+                        intensity_qty, intensity_units,
+                        metadata
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    workout['id'],
+                    workout['name'],
+                    workout['start'],
+                    workout['end'],
+                    workout['duration'],
+                    workout['location'],
+                    workout.get('distance', {}).get('qty'),
+                    workout.get('distance', {}).get('units'),
+                    workout.get('elevationUp', {}).get('qty'),
+                    workout.get('elevationUp', {}).get('units'),
+                    workout.get('activeEnergyBurned', {}).get('qty'),
+                    workout.get('activeEnergyBurned', {}).get('units'),
+                    workout.get('temperature', {}).get('qty'),
+                    workout.get('temperature', {}).get('units'),
+                    workout.get('humidity', {}).get('qty'),
+                    workout.get('humidity', {}).get('units'),
+                    workout.get('intensity', {}).get('qty'),
+                    workout.get('intensity', {}).get('units'),
+                    json.dumps(workout.get('metadata', {}))
+                ))
+                
+                # Insert route points
+                for point in workout.get('route', []):
+                    cursor.execute("""
+                        INSERT INTO route_points (
+                            workout_id, timestamp, latitude, longitude,
+                            altitude, speed, speed_accuracy, course,
+                            course_accuracy, horizontal_accuracy, vertical_accuracy
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        workout['id'],
+                        point['timestamp'],
+                        point['latitude'],
+                        point['longitude'],
+                        point['altitude'],
+                        point['speed'],
+                        point['speedAccuracy'],
+                        point['course'],
+                        point['courseAccuracy'],
+                        point['horizontalAccuracy'],
+                        point['verticalAccuracy']
+                    ))
+                
+                conn.commit()
+                return True
+                
+        except Exception as e:
+            print(f"Error storing workout: {e}")
+            return False
+    
+    def get_workout(self, workout_id: str) -> Dict[str, Any]:
+        """Retrieve a workout and its route points by ID."""
+        # Implementation for retrieving workout data
+        pass
     
     def get_all_workouts(self) -> pd.DataFrame:
         """

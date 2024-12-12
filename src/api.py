@@ -84,24 +84,26 @@ async def create_workout(payload: dict[str, Any]):
         with open(filename, 'w') as f:
             json.dump(payload, f, indent=2)
         
-        # Extract workout details for response
+        # Store workouts in database
         workouts = payload.get('data', {}).get('workouts', [])
-        workout_info = [
-            {
-                'name': workout.get('name', 'Unknown'),
-                'start': workout.get('start'),
-                'end': workout.get('end'),
-                'activeEnergyBurned': workout.get('activeEnergyBurned', {}).get('qty', 0),
-                'units': workout.get('activeEnergyBurned', {}).get('units', 'kcal')
-            }
-            for workout in workouts
-        ]
+        stored_workouts = []
+        
+        for workout in workouts:
+            success = db.store_workout(workout)
+            if success:
+                stored_workouts.append({
+                    'name': workout.get('name', 'Unknown'),
+                    'start': workout.get('start'),
+                    'end': workout.get('end'),
+                    'activeEnergyBurned': workout.get('activeEnergyBurned', {}).get('qty', 0),
+                    'units': workout.get('activeEnergyBurned', {}).get('units', 'kcal')
+                })
             
         return {
             "status": "success",
-            "message": f"Received {len(workouts)} workouts",
+            "message": f"Stored {len(stored_workouts)} workouts",
             "filename": filename,
-            "workouts": workout_info
+            "workouts": stored_workouts
         }
     except Exception as e:
         return {
