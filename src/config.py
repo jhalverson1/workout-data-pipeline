@@ -1,3 +1,5 @@
+"""Application configuration."""
+
 from dotenv import load_dotenv
 import os
 
@@ -7,7 +9,6 @@ class Config:
     # Google Configuration
     SPREADSHEET_ID = os.getenv("SPREADSHEET_ID")
     SERVICE_ACCOUNT_FILE = os.getenv("SERVICE_ACCOUNT_FILE")
-    GOOGLE_DRIVE_WORKOUTS_FOLDER_ID = os.getenv("GOOGLE_DRIVE_WORKOUTS_FOLDER_ID")
     
     # Gmail Configuration
     GMAIL_ADDRESS = os.getenv("GMAIL_ADDRESS")
@@ -15,11 +16,6 @@ class Config:
     GMAIL_RECIPIENT = os.getenv("GMAIL_RECIPIENT")
     
     # Application Configuration
-    VALID_WORKOUT_TYPES = ["Outdoor Run"]
-    
-    # Database Configuration
     DATABASE_PATH = os.getenv("DATABASE_PATH", "workouts.db")
-    
-    # API Configuration
     API_HOST = os.getenv("API_HOST", "0.0.0.0")
     API_PORT = int(os.getenv("API_PORT", "8000"))

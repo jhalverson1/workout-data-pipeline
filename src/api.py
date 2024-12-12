@@ -2,78 +2,23 @@
 REST API Module for Workout Tracking Application
 
 This module provides the FastAPI application and endpoints for receiving and
-managing workout data. It handles:
-- Data validation using Pydantic models
-- Workout data submission
-- Workout data retrieval
-- Error handling and HTTP responses
-
-The API provides endpoints for:
-- POST /workouts: Submit new workout data
-- GET /workouts: Retrieve all stored workouts
-
-Example:
-    To start the API server:
-    ```
-    uvicorn api:app --host 0.0.0.0 --port 8000
-    ```
+managing workout data.
 """
 
-from fastapi import FastAPI, HTTPException, APIRouter
-from pydantic import BaseModel, Field
-from typing import List, Dict, Optional, Any
-from datetime import datetime
+from fastapi import FastAPI, APIRouter
+from typing import Dict, Any
 from database import DatabaseManager
-from data_processor import WorkoutDataProcessor
-import json
-import os
 from email_service import EmailService
 import pandas as pd
 from google_services import GoogleServices
 from config import Config
+import os
 
 app = FastAPI()
 db = DatabaseManager()
-processor = WorkoutDataProcessor()
 google_services = GoogleServices()
 
 router = APIRouter(prefix="/api/v1/workouts", tags=["workouts"])
-
-# Pydantic models for data validation
-class Measurement(BaseModel):
-    units: str
-    qty: float
-
-class RoutePoint(BaseModel):
-    speed: float
-    speedAccuracy: float
-    longitude: float
-    courseAccuracy: float
-    timestamp: datetime
-    altitude: float
-    course: float
-    latitude: float
-    horizontalAccuracy: float
-    verticalAccuracy: float
-
-class Workout(BaseModel):
-    id: str
-    name: str
-    start: datetime
-    end: datetime
-    duration: float
-    location: str
-    distance: Optional[Measurement]
-    elevationUp: Optional[Measurement]
-    temperature: Optional[Measurement]
-    humidity: Optional[Measurement]
-    intensity: Optional[Measurement]
-    activeEnergyBurned: Optional[Measurement]
-    route: List[RoutePoint]
-    metadata: Dict = Field(default_factory=dict)
-
-class WorkoutPayload(BaseModel):
-    data: Dict[str, List[Workout]]
 
 def get_db_size():
     """Get database size in MB"""
@@ -95,7 +40,6 @@ def update_google_sheets(workouts_df: pd.DataFrame) -> bool:
 @router.post("/")
 async def create_workout(payload: dict[str, Any]):
     try:
-        # Store workouts in database
         workouts = payload.get('data', {}).get('workouts', [])
         stored_workouts = []
         duplicate_count = 0
@@ -113,21 +57,17 @@ async def create_workout(payload: dict[str, Any]):
             else:
                 duplicate_count += 1
         
-        # Get statistics
         total_workouts = len(db.get_all_workouts())
         db_size = get_db_size()
         
-        # Update Google Sheets if new workouts were stored
         sheets_update_status = "Not attempted"
         if stored_workouts:
-            # Get all workouts from DB as DataFrame
             workouts_df = db.get_all_workouts()
             if update_google_sheets(workouts_df):
                 sheets_update_status = "Success"
             else:
                 sheets_update_status = "Failed"
         
-        # Create summary message
         summary = (
             "\n=== Workout Import Summary ===\n"
             f"Processed: {len(workouts)} workouts\n"
@@ -139,7 +79,6 @@ async def create_workout(payload: dict[str, Any]):
             "===========================\n"
         )
         
-        # Print to terminal and send email
         print(summary)
         EmailService.send_email(summary)
             
@@ -161,10 +100,5 @@ async def create_workout(payload: dict[str, Any]):
             "status": "error",
             "message": str(e)
         }
-
-@router.get("/{workout_id}")
-async def get_workout(workout_id: str):
-    # Retrieve workout data from database
-    pass 
 
 app.include_router(router)

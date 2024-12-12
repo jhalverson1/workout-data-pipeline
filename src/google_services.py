@@ -21,23 +21,11 @@ class GoogleServices:
         """
         Initializes the GoogleServices class and authenticates the user.
         """
-        self.drive_service, self.sheets_service = self._authenticate()
-    
-    def _authenticate(self) -> Tuple[object, object]:
-        """
-        Authenticates the user using service account credentials.
-
-        Returns:
-            Tuple[object, object]: Authenticated Drive and Sheets service objects.
-        """
         creds = Credentials.from_service_account_file(
             Config.SERVICE_ACCOUNT_FILE,
             scopes=["https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/spreadsheets"]
         )
-        return (
-            build("drive", "v3", credentials=creds),
-            build("sheets", "v4", credentials=creds)
-        )
+        self.sheets_service = build("sheets", "v4", credentials=creds)
     
     def fetch_files(self, folder_id: str) -> List[Dict[str, str]]:
         """
