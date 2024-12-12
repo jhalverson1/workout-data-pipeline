@@ -28,10 +28,14 @@ from data_processor import WorkoutDataProcessor
 import json
 import os
 from email_service import EmailService
+import pandas as pd
+from google_services import GoogleServices
+from config import Config
 
 app = FastAPI()
 db = DatabaseManager()
 processor = WorkoutDataProcessor()
+google_services = GoogleServices()
 
 router = APIRouter(prefix="/api/v1/workouts", tags=["workouts"])
 
@@ -79,6 +83,15 @@ def get_db_size():
     except:
         return 0
 
+def update_google_sheets(workouts_df: pd.DataFrame) -> bool:
+    """Update Google Sheets with the workout data"""
+    try:
+        google_services.update_sheet(workouts_df, Config.SPREADSHEET_ID)
+        return True
+    except Exception as e:
+        print(f"Error updating Google Sheets: {e}")
+        return False
+
 @router.post("/")
 async def create_workout(payload: dict[str, Any]):
     try:
@@ -104,6 +117,16 @@ async def create_workout(payload: dict[str, Any]):
         total_workouts = len(db.get_all_workouts())
         db_size = get_db_size()
         
+        # Update Google Sheets if new workouts were stored
+        sheets_update_status = "Not attempted"
+        if stored_workouts:
+            # Get all workouts from DB as DataFrame
+            workouts_df = db.get_all_workouts()
+            if update_google_sheets(workouts_df):
+                sheets_update_status = "Success"
+            else:
+                sheets_update_status = "Failed"
+        
         # Create summary message
         summary = (
             "\n=== Workout Import Summary ===\n"
@@ -112,13 +135,12 @@ async def create_workout(payload: dict[str, Any]):
             f"Skipped:   {duplicate_count} duplicates\n"
             f"Total DB:  {total_workouts} workouts\n"
             f"DB Size:   {db_size} MB\n"
+            f"Sheets:    {sheets_update_status}\n"
             "===========================\n"
         )
         
-        # Print to terminal
+        # Print to terminal and send email
         print(summary)
-        
-        # Send email
         EmailService.send_email(summary)
             
         return {
@@ -128,6 +150,7 @@ async def create_workout(payload: dict[str, Any]):
             "duplicates": duplicate_count,
             "total_in_db": total_workouts,
             "db_size_mb": db_size,
+            "sheets_update": sheets_update_status,
             "workouts": stored_workouts
         }
     except Exception as e:
