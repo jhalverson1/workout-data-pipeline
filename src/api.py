@@ -70,6 +70,14 @@ class Workout(BaseModel):
 class WorkoutPayload(BaseModel):
     data: Dict[str, List[Workout]]
 
+def get_db_size():
+    """Get database size in MB"""
+    try:
+        size_bytes = os.path.getsize(db.db_path)
+        return round(size_bytes / (1024 * 1024), 2)  # Convert bytes to MB
+    except:
+        return 0
+
 @router.post("/")
 async def create_workout(payload: dict[str, Any]):
     try:
@@ -91,8 +99,9 @@ async def create_workout(payload: dict[str, Any]):
             else:
                 duplicate_count += 1
         
-        # Get total count of workouts in DB
+        # Get statistics
         total_workouts = len(db.get_all_workouts())
+        db_size = get_db_size()
         
         # Print statistics to terminal
         print("\n=== Workout Import Summary ===")
@@ -100,6 +109,7 @@ async def create_workout(payload: dict[str, Any]):
         print(f"Stored:    {len(stored_workouts)} new workouts")
         print(f"Skipped:   {duplicate_count} duplicates")
         print(f"Total DB:  {total_workouts} workouts")
+        print(f"DB Size:   {db_size} MB")
         print("===========================\n")
             
         return {
@@ -108,6 +118,7 @@ async def create_workout(payload: dict[str, Any]):
             "stored": len(stored_workouts),
             "duplicates": duplicate_count,
             "total_in_db": total_workouts,
+            "db_size_mb": db_size,
             "workouts": stored_workouts
         }
     except Exception as e:
