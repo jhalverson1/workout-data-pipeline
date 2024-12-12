@@ -92,7 +92,7 @@ async def create_workout(payload: dict[str, Any]):
             success = db.store_workout(workout)
             if success:
                 stored_workouts.append({
-                    'type': workout.get('type', 'Unknown'),
+                    'type': workout.get('workoutActivityType', 'Unknown'),
                     'start': workout.get('start'),
                     'end': workout.get('end'),
                     'activeEnergyBurned': workout.get('activeEnergyBurned', {}).get('qty', 0),

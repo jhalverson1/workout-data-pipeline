@@ -140,7 +140,7 @@ class DatabaseManager:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 
-                # Insert workout data
+                # Insert workout data with safer data access
                 cursor.execute("""
                     INSERT INTO workouts (
                         id, type, start_time, end_time, duration, location,
@@ -153,12 +153,12 @@ class DatabaseManager:
                         metadata
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
-                    workout['id'],
-                    workout['type'],
-                    workout['start'],
-                    workout['end'],
-                    workout['duration'],
-                    workout['location'],
+                    workout.get('id', ''),
+                    workout.get('workoutActivityType', 'Unknown'),
+                    workout.get('start', ''),
+                    workout.get('end', ''),
+                    workout.get('duration', 0.0),
+                    workout.get('location', ''),
                     workout.get('distance', {}).get('qty'),
                     workout.get('distance', {}).get('units'),
                     workout.get('elevationUp', {}).get('qty'),
