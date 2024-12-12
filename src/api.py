@@ -26,11 +26,7 @@ from datetime import datetime
 from database import DatabaseManager
 from data_processor import WorkoutDataProcessor
 
-app = FastAPI(
-    title="Workout Tracking API",
-    description="API for receiving and storing workout data",
-    version="1.0.0"
-)
+app = FastAPI()
 db = DatabaseManager()
 processor = WorkoutDataProcessor()
 
@@ -95,3 +91,5 @@ async def create_workout(payload: WorkoutPayload):
 async def get_workout(workout_id: str):
     # Retrieve workout data from database
     pass 
+
+app.include_router(router)
