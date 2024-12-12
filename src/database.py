@@ -83,11 +83,15 @@ class DatabaseManager:
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             
+            # Drop existing tables if they exist
+            cursor.execute("DROP TABLE IF EXISTS route_points")
+            cursor.execute("DROP TABLE IF EXISTS workouts")
+            
             # Create workouts table
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS workouts (
                     id TEXT PRIMARY KEY,
-                    name TEXT NOT NULL,
+                    type TEXT,
                     start_time TIMESTAMP,
                     end_time TIMESTAMP,
                     duration FLOAT,
@@ -139,7 +143,7 @@ class DatabaseManager:
                 # Insert workout data
                 cursor.execute("""
                     INSERT INTO workouts (
-                        id, name, start_time, end_time, duration, location,
+                        id, type, start_time, end_time, duration, location,
                         distance_qty, distance_units,
                         elevation_up_qty, elevation_up_units,
                         energy_burned_qty, energy_burned_units,
@@ -150,7 +154,7 @@ class DatabaseManager:
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     workout['id'],
-                    workout['name'],
+                    workout['type'],
                     workout['start'],
                     workout['end'],
                     workout['duration'],
